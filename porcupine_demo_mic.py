@@ -19,6 +19,7 @@ import threading
 from typing import ContextManager
 import wave
 from datetime import datetime
+from googlesearch import search
 import requests
 import pvporcupine
 import datetime
@@ -154,7 +155,7 @@ def push_commit(repo_path, branch_name, commit_message):
     try:
         # Push to the specified branch
         subprocess.run(['git', 'push', 'origin', branch_name], cwd=repo_path, check=True)
-        speak("Changes committed and pushed successfully to the github")
+        speak("Changes committed and pushed successfully to the git hub")
     except subprocess.CalledProcessError as e:
         speak(f"Error pushing changes: {e}")
         return
@@ -235,7 +236,18 @@ def listen():
         print('You said:', voice_text)
 
     return voice_text
-
+def open_first_google_result(query):
+    try:
+        # Perform Google search and get the first result
+        search_results = search(query, num=1, stop=1)
+        first_result = next(search_results)
+        
+        # Open the first result in the default web browser
+        webbrowser.open(first_result)
+        return True
+    except Exception as e:
+        print("Error:", e)
+        return False
 
 def listen2():
     # global audcheck
@@ -865,7 +877,7 @@ def main():
                             speak("Opening Facebook")                            
                         elif 'open github' in voice_note:
                             webbrowser.open("https://www.github.com/")
-                            speak("Opening Github")            
+                            speak("Opening Git hub")            
                         elif 'open chat' in voice_note:
                             webbrowser.open("https://chat.openai.com/")
                             speak("Opening ChatGPT")            
@@ -894,7 +906,7 @@ def main():
                                 speak('Is the message correct?'+ commit_msg)
                                 confirm = listen2().lower()
                                 if 'yes' in confirm :
-                                    speak('Okay, Pushing updated code to the Github, Please wait')
+                                    speak('Okay, Pushing updated code to the Git hub, Please wait')
                                     commit_message = commit_msg
                                     push_commit(repo_path, branch_name, commit_message)
                                     break
@@ -1260,12 +1272,12 @@ def main():
                                         os.system("start cmd")
                                         speak('Opening Command Promt')
                                     else:
-                                        voice_note = voice_note.replace('open', '').replace('application', '').replace('app', '').strip()                                
-                                        webbrowser.open('https://www.google.com/search?q={}'.format(voice_note))
+                                        voice_note = voice_note.replace('open', '').replace('application', '').replace('app', '').strip()                                        
+                                        query = voice_note
+                                        search_thread = threading.Thread(target=open_first_google_result, args=(query,))
+                                        search_thread.start()
                                         speak('Opening in browser')
-                                        time.sleep(1)
-                                        pyautogui.hotkey('down')
-                                        pyautogui.hotkey('down')
+                                        
                                 else:
                                     print("Error: 'open', 'application', or 'app' not found in input.")
                             else:
@@ -1329,7 +1341,7 @@ def main():
                                 os.system('shutdown -s -t 0')
                             else:
                                 speak('As you wish')
-                        else:
+                        elif voice_note:
                             random_messages = [
                                 "Sorry, I'm not familiar with that phrase. Try asking me something else.",
                                 "I'm not sure about that statement. Ask me a different question, please.",
