@@ -16,6 +16,7 @@ import random
 import struct
 import sys
 import threading
+from typing import ContextManager
 import wave
 from datetime import datetime
 import requests
@@ -135,7 +136,28 @@ def play_start_sound():
 def play_stop_sound():
     playsound("C:\\users\\mashu\\stop.mp3")
     
+def push_commit(repo_path, branch_name, commit_message):
+    try:
+        # Add all changes to the index
+        subprocess.run(['git', 'add', 'porcupine_demo_mic.py'], cwd=repo_path, check=True)
+    except subprocess.CalledProcessError as e:
+        speak(f"Error adding changes to the index: {e}")
+        return
 
+    try:
+        # Commit changes
+        subprocess.run(['git', 'commit', '-m', commit_message], cwd=repo_path, check=True)
+    except subprocess.CalledProcessError as e:
+        speak(f"Error committing changes: {e}")
+        return
+
+    try:
+        # Push to the specified branch
+        subprocess.run(['git', 'push', 'origin', branch_name], cwd=repo_path, check=True)
+        speak("Changes committed and pushed successfully to the github")
+    except subprocess.CalledProcessError as e:
+        speak(f"Error pushing changes: {e}")
+        return
 audcheck = 0  # Declare audcheck as a global variable
 listen_time = 0 
 
@@ -836,6 +858,8 @@ def main():
                             speak(
                                 'I am MIAMI, An artificial intelligence, or you can say a virtual personal assistant developed by Mr. Mashud')
                         
+                        
+                        
                         elif 'open facebook' in voice_note:
                             webbrowser.open("https://www.facebook.com/")
                             speak("Opening Facebook")                            
@@ -860,6 +884,27 @@ def main():
                             else:
                                 subprocess.Popen(["cmd", "/C", "start whatsapp://"], shell=True)
                             speak("Opening WhatsApp")
+                        elif ('upload' in voice_note or 'update' in voice_note) and 'git' in voice_note:
+                            repo_path = 'C:\\Users\\mashu\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\pvporcupinedemo'
+                            branch_name = 'main'  # Specify the branch you want to push to
+                            speak('okay, what will be the commited message?')
+                            checking = 0
+                            while checking < 3:                                
+                                commit_msg = listen2()
+                                speak('Is the message correct?'+ commit_msg)
+                                confirm = listen2().lower()
+                                if 'yes' in confirm :
+                                    speak('Okay, Pushing updated code to the Github, Please wait')
+                                    commit_message = commit_msg
+                                    push_commit(repo_path, branch_name, commit_message)
+                                    break
+                                else:
+                                    speak('My Apologies, please tell me again what will be the commited message?')
+                                    checking += 1
+
+                            if checking == 3:
+                                speak('Sorry maximum number of attempts tried. please try again later')                           
+                                                             
                         elif 'music' in voice_note and 'youtube' in voice_note and 'my' in voice_note:
                             webbrowser.open("https://www.youtube.com/watch?v=q2-HquLLmSw&t=35s")
                             speak("opening ")
