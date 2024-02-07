@@ -42,9 +42,9 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 from PyDictionary import PyDictionary
 from playsound import playsound
 import win32gui, win32con
-
+import azure.cognitiveservices.speech as speechsdk
 speech = sr.Recognizer()
-
+from pycaw.pycaw import IAudioMeterInformation
 engine = pyttsx3.init()
 engine.setProperty('voice','HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\Voices\\Tokens\\TTS_MS_EN-US_ZIRA_11.0')
 rate = engine.getProperty('rate')
@@ -94,13 +94,21 @@ def is_computer_locked():
     return class_name.value == "Windows.UI.Core.CoreWindow"
 
 def play_first_youtube_video(query):
-    pyautogui.hotkey('playpause')
+    test = is_audio_playing()
+    if test:
+        pyautogui.hotkey('playpause')
+        
     kit.playonyt(query)
+    
 def speak(cmd):
+    global vnote
+    if not vnote:
+        vnote = "Miami"    
+    log_in_thread(vnote, cmd)
     engine.say(cmd)
-    print("System :", cmd)
+    print("Miami :", cmd)
     engine.runAndWait()
-    log_request_response(vnote, cmd)
+    vnote = ''
 
 
 def get_default_audio_interface():
@@ -121,60 +129,168 @@ def get_current_volume(interface):
 # Get the default audio endpoint volume interface
 audio_interface = get_default_audio_interface()
 
+def play_start_sound():
+    playsound("C:\\users\\mashu\\start.mp3")
 
+def play_stop_sound():
+    playsound("C:\\users\\mashu\\stop.mp3")
     
 
 audcheck = 0  # Declare audcheck as a global variable
 listen_time = 0 
-def rec_voice():
-    global audcheck
-    global listen_time
-    if listen_time > 0:
-        playsound("C:\\users\\mashu\\start.mp3")
 
+# def listen():
+#     # global audcheck
+#     # global listen_time
+#     # if listen_time > 0:
+#     #     playsound("C:\\users\\mashu\\start.mp3")
+
+#     original_volume = get_current_volume(audio_interface)
+#     set_volume_system(audio_interface, 0.2)
+
+#     with sr.Microphone() as source:
+#         print('Listening...')
+#         try:
+#             audio = speech.listen(source=source, timeout=5, phrase_time_limit=3)
+#         except sr.WaitTimeoutError as e:
+#             print("Timeout; {0}".format(e))
+#             return ''
+
+#     voice_text = ''
+#     try:
+#         print("Recognizing...")
+#         voice_text = speech.recognize_google(audio, language='en-in')
+#     except sr.UnknownValueError:
+#         audcheck += 1
+#         pass
+#     except sr.RequestError:
+#         print("Network error")
+
+#     if not voice_text:
+#         print("Sorry, my system doesn't detect any voice command")
+#         # listen_time += 1
+#         # if audcheck == 1:
+#         #     set_volume_system(audio_interface, original_volume)
+#         playsound("C:\\users\\mashu\\stop.mp3")
+#         print(':: Waiting for wakeword detection ::')
+#             # listen_time = 0
+#             # Add code for playing stop sound or any other action
+
+#     set_volume_system(audio_interface, original_volume)
+
+#     if voice_text:
+#         print('You said:', voice_text)
+#         # audcheck = 0
+#         # listen_time += 1
+
+#     return voice_text
+def listen():
     original_volume = get_current_volume(audio_interface)
-    set_volume_system(audio_interface, 0.1)
-
+    set_volume_system(audio_interface, original_volume * 0.2)
     with sr.Microphone() as source:
         print('Listening...')
         try:
             audio = speech.listen(source=source, timeout=5, phrase_time_limit=3)
         except sr.WaitTimeoutError as e:
+            set_volume_system(audio_interface, original_volume)
             print("Timeout; {0}".format(e))
-            return ''
-
+            return ''  # Return an empty string here to stop further execution
     voice_text = ''
     try:
         print("Recognizing...")
         voice_text = speech.recognize_google(audio, language='en-in')
     except sr.UnknownValueError:
-        audcheck += 1
         pass
     except sr.RequestError:
-        print("Network error")
-
+        speak("Sorry i am not connected to internet, Please check the internet connection")
     if not voice_text:
+        set_volume_system(audio_interface, original_volume)
         print("Sorry, my system doesn't detect any voice command")
-        listen_time += 1
-        if audcheck == 1:
-            set_volume_system(audio_interface, original_volume)
-            playsound("C:\\users\\mashu\\stop.mp3")
-            print(':: Waiting for wakeword detection ::')
-            listen_time = 0
-            # Add code for playing stop sound or any other action
-
+        playsound("C:\\users\\mashu\\stop.mp3")
     set_volume_system(audio_interface, original_volume)
 
     if voice_text:
         print('You said:', voice_text)
-        audcheck = 0
-        listen_time += 1
 
     return voice_text
 
 
+def listen2():
+    # global audcheck
+    # global listen_time
+    # if listen_time > 0:
+    playsound("C:\\users\\mashu\\start.mp3")
+    original_volume = get_current_volume(audio_interface)
+    set_volume_system(audio_interface, 0.3)
+    subscription_key = "1aa6bdc29d29411fbc2f606abb89a742"
+    region = "centralindia"
 
+    speech_config = speechsdk.SpeechConfig(subscription=subscription_key, region=region)
+    audio_config = speechsdk.AudioConfig(use_default_microphone=True)
+
+    print('Listening...')
+    try:
+        recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
+        result = recognizer.recognize_once()
+
+        if result.reason == speechsdk.ResultReason.RecognizedSpeech:
+            set_volume_system(audio_interface, original_volume)
+            print('Recognized: {}'.format(result.text))
+            # audcheck = 0
+            # listen_time += 1
+            return result.text
+        elif result.reason == speechsdk.ResultReason.NoMatch:
+            set_volume_system(audio_interface, original_volume)
+            print('No speech could be recognized')
+            # listen_time += 1
+            # audcheck += 1
+            # if audcheck == 1:                
+            #     playsound("C:\\users\\mashu\\stop.mp3")
+            #     print(':: Waiting for wakeword detection ::')
+            #     listen_time = 0
+            return ''
+        elif result.reason == speechsdk.ResultReason.Canceled:
+            cancellation_details = result.cancellation_details
+            print('Speech Recognition canceled: {}'.format(cancellation_details.reason))
+            if cancellation_details.reason == speechsdk.CancellationReason.Error:
+                print('Error details: {}'.format(cancellation_details.error_details))
+            return ''
+        set_volume_system(audio_interface, original_volume)
+    except Exception as e:
+        print("Speech recognition error: {}".format(e))
+        return ''
+
+def read_installed_apps(filename):
+    installed_apps = {}
+    try:
+        with open(filename, 'r') as file:
+            for line in file:
+                # Split each line into application name and identifier
+                parts = line.strip().split(': ')
+                if len(parts) == 2:
+                    app_name, app_id = parts
+                    # Store lowercase version of the application name
+                    installed_apps[app_name.lower()] = app_id
+        return installed_apps
+    except FileNotFoundError:
+        print(f"Error: File '{filename}' not found.")
+        return None
+
+def open_app_by_id(app_id):
+    try:
+        os.system(f'start shell:AppsFolder\\{app_id}')
+    except Exception as e:
+        print(f"Error: {e}")
 ## Volume Control#############
+
+def is_audio_playing():
+    sessions = AudioUtilities.GetAllSessions()
+    for session in sessions:
+        volume = session._ctl.QueryInterface(IAudioMeterInformation)
+        peak_value = volume.GetPeakValue()
+        if peak_value > 0:
+            return True
+    return False
 
 log_file_path = "C:/Users/mashu/log.txt"
 
@@ -184,6 +300,9 @@ def log_request_response(request, response):
     log_entry = f"{timestamp} - Request: {request} | Response: {response}\n"
     with open(log_file_path, "a") as log_file:
         log_file.write(log_entry)
+
+def log_in_thread(request, response):
+    threading.Thread(target=log_request_response, args=(request, response)).start()
 
         
 SendInput = ctypes.windll.user32.SendInput
@@ -343,7 +462,7 @@ def dictionary(cmd):
         except ValueError:
             speak('Error: Target word not found in the command.')
 
-# def rec_voice():
+# def listen():
 #     root = create_window() 
 #     root.update()
 #     root.configure(background='green')
@@ -386,7 +505,7 @@ def wishMe():
         speak("Good Evening  ")
         
         
-# def rec_voice():
+# def listen():
 #     with sr.Microphone() as source:
 #         print('Listening...')
 #         audio = speech.listen(source=source, timeout=5, phrase_time_limit=3)
@@ -412,7 +531,9 @@ def wishMe():
 #         audcheck = 0
 #     return voice_text
 
-
+def miami_response():
+    responses = ['Yes', 'How can I help you?', 'Yes, How can I assist you?', "Yes, I'm here.",'Yea']
+    return random.choice(responses)
 def weather(cmd):
     try:
         api_key = "e4f632b30200a8119247a8df609f16fa"
@@ -454,7 +575,7 @@ def weather(cmd):
         speak('sorry , unable to fetch weather information as Internet and I is not connected.')
         
 def shutdown_sys(voice_note):
-    password = rec_voice().lower()
+    password = listen().lower()
     if '8' in password and '0' in password and '2' in password and '5' in password:
         if 'shutdown' in voice_note or 'shut' in voice_note:
             speak('shutting down system')
@@ -605,19 +726,20 @@ def main():
     #     print('not locked')
     #     time.sleep(1)
             
-    if failsafe_check == 0:
-            hour = int(datetime.datetime.now().hour)
-            if hour >= 5 and hour < 12:
-                weather('morning')
-            else:
-                responses = [
-                    "I'm ready to assist you. Just give me a call when you need help.",
-                    "I'm here and ready for any tasks you have. Feel free to call on me.",
-                    "Ready and waiting to assist you. Just let me know what you need.",
-                    "I'm fully prepared to help. Call me anytime you require assistance.",
-                    "I'm at your service. Call me when you're ready, and I'll be here to assist.",
-                ]
-                speak(random.choice(responses))
+    if failsafe_check == 0:       
+        hour = int(datetime.datetime.now().hour)
+        if hour >= 5 and hour < 12:
+            weather('morning')
+        else:
+            responses = [
+                "I'm ready to assist you. Just give me a call when you need help.",
+                "I'm here and ready for any tasks you have. Feel free to call on me.",
+                "Ready and waiting to assist you. Just let me know what you need.",
+                "I'm fully prepared to help. Call me anytime you require assistance.",
+                "I'm at your service. Call me when you're ready, and I'll be here to assist.",
+            ]
+            
+            speak(random.choice(responses))
     else :
         speak('After solving the problem, please let me know')
     print(':: waiting for wakeword detection ::')
@@ -634,9 +756,10 @@ def main():
                 global audcheck
                 global vnote
                 audcheck = 0
+                global voice_note
                 if failsafe_check > 0 :
                     speak('Yes, did the glitch of my program is solved:')
-                    voice_note = rec_voice().lower()
+                    voice_note = listen2().lower()
                     if 'yes' in voice_note or 'solve' in voice_note:
                         speak('Thank you for fixing my problem')
                         open("C:\\Users\\mashu\\error.txt", "w").close()
@@ -653,534 +776,546 @@ def main():
                     else:                        
                         speak('Its okay now tell me  what can i do for you ?')
                 else:
-                    # play_sound("C:\\users\\mashu\\start.mp3")      
-                    speak('Yes')        
-                    while audcheck < 1:
-                        try:
-                            slp = 0
-                            voice_note = rec_voice().lower()
-                            vnote = voice_note
-                            if voice_note == 'miami':
-                                speak('yes , what can i do for you ?')
-                                continue
-                            if voice_note == 'open' :
-                                speak('what do you want me to open  ?')
-                                newcm = rec_voice().lower()
-                                newcm = newcm.replace('open','')
-                                voice_note =str(voice_note +' '+ newcm)
-                            voice_note = voice_note.replace('miami', '')
-                            # if 'translate' in voice_note or 'in hindi' in voice_note or 'in bengali' in voice_note :
-                            #     translator(voice_note)
-                            #     continue
-                            # elif 'mean' in voice_note or 'meaning' in voice_note:
-                            #     dictionary(voice_note)
-                            #     continue
-                            if 'hello' in voice_note or 'fine ' in voice_note or ' hi ' in voice_note:
-                                speak("hello  how are you?")
-                                voice_note = rec_voice().lower()
-                                if 'not fine' in voice_note or 'not ok' in voice_note:
-                                    speak('i am sorry to hear that. I hope you feel better ')
-                                    continue
-                                elif 'fine' in voice_note or 'ok' in voice_note:
-                                    speak('i am glad to hear it')
-                                else:
-                                    speak(
-                                        "hmm i thing you don't want to share , just take care of yourself")
-                                continue
-                            elif 'are you there' in voice_note:
-                                speak('Yes  tell me what to do')
-                                continue
-                            # elif 'wikipedia' in voice_note:
-                            #     speak('Searching Wikipedia...')
-                            #     voice_note = voice_note.replace("wikipedia", "")
-                            #     results = wikipedia.summary(voice_note, sentences=2)
-                            #     speak("According to Wikipedia")
-                            #     speak(results)
-                            #     continue
-                            elif re.search(r'\b(how are you)\b', voice_note):
-                                responses = ["I'm just a computer program, but thanks for asking!", "I'm functioning well, thank you!"]
-                                speak(random.choice(responses))                           
-                            elif 'thank you' in voice_note:
-                                responses = ["You're welcome . I'm just doing my job.", "No problem, !", "Glad I could help!"]
-                                speak(random.choice(responses))
-                            elif 'call' in voice_note and '' in voice_note:
-                                speak('because you have created me')
-                                continue
-                            elif ('who' in voice_note and 'are you' in voice_note) or 'introduce' in voice_note:
+                    if is_audio_playing():
+                        voice_note = listen().lower()
+                    else:
+                        reply= miami_response()
+                        speak(reply)
+                        voice_note = listen().lower()
+                    try:
+                        vnote = voice_note
+                        if voice_note == 'miami':
+                            speak('yes , what can i do for you ?')
+
+                        if voice_note == 'open' :
+                            speak('what do you want me to open  ?')
+                            newcm = listen().lower()
+                            newcm = newcm.replace('open','')
+                            voice_note =str(voice_note +' '+ newcm)
+                        voice_note = voice_note.replace('miami', '')
+                        # if 'translate' in voice_note or 'in hindi' in voice_note or 'in bengali' in voice_note :
+                        #     translator(voice_note)
+                        #     continue
+                        # elif 'mean' in voice_note or 'meaning' in voice_note:
+                        #     dictionary(voice_note)
+                        #     continue
+                        if 'hello' in voice_note or 'fine ' in voice_note or ' hi ' in voice_note:
+                            speak("hello how are you?")
+                            voice_note = listen2().lower()
+                            if 'not fine' in voice_note or 'not ok' in voice_note:
+                                speak('i am sorry to hear that. I hope you feel better ')
+    
+                            elif 'fine' in voice_note or 'ok' in voice_note:
+                                speak('i am glad to hear it')
+                            else:
                                 speak(
-                                    'I am MIAMI, An artificial intelligence, or you can say a virtual personal assistant developed by Mr. Mashudd')
-                                continue
-                            elif 'am i' in voice_note or "my name" in voice_note or 'made you' in voice_note or 'created you' in voice_note or 'you know me' in voice_note or 'developed you' in voice_note:
-                                if 'you know me' in voice_note:
-                                    speak('Yes, i know You , you are my Creater, Mr.Mashud')
-                                    continue
-                                else:
-                                    speak("Mashud")
-                                    continue
-                            elif 'open facebook' in voice_note:
-                                webbrowser.open("https://www.facebook.com/")
-                                speak("opening ")
-                                continue
-                            elif 'open github' in voice_note:
-                                webbrowser.open("https://www.github.com/")
-                                speak("opening ")
-                                continue
-                            elif 'open google' in voice_note:
-                                webbrowser.open("https://google.com/")
-                                speak("opening ")
-                                continue
-                            elif 'open stackoverflow' in voice_note:
-                                webbrowser.open("https://stackoverflow.com/")
-                                speak("opening ")
-                                continue
-                            elif 'open youtube' in voice_note:
-                                webbrowser.open("https://youtube.com/")
-                                speak("opening ")
-                                continue
-                            elif 'open whatsapp' in voice_note:
+                                    "hmm i thing you don't want to share , just take care of yourself")
+
+                        elif 'are you there' in voice_note:
+                            speak('Yes  tell me what to do')
+                        elif 'lock' in voice_note and not ('unlock' in voice_note) and ('system' in voice_note or 'pc' in voice_note or 'com' in voice_note):
+                            speak("locking System")
+                            ctypes.windll.user32.LockWorkStation()
+                        # elif 'wikipedia' in voice_note:
+                        #     speak('Searching Wikipedia...')
+                        #     voice_note = voice_note.replace("wikipedia", "")
+                        #     results = wikipedia.summary(voice_note, sentences=2)
+                        #     speak("According to Wikipedia")
+                        #     speak(results)
+                        #     continue
+                        elif re.search(r'\b(how are you)\b', voice_note):
+                            responses = ["I'm just a computer program, but thanks for asking!", "I'm functioning well, thank you!"]
+                            speak(random.choice(responses))                           
+                        elif 'thank you' in voice_note:
+                            responses = ["You're welcome . I'm just doing my job.", "No problem, !", "Glad I could help!"]
+                            speak(random.choice(responses))
+                        # elif 'call' in voice_note and '' in voice_note:
+                        #     speak('because you have created me')
+                        #     continue
+                        elif ('who' in voice_note and 'are you' in voice_note) or 'introduce' in voice_note:
+                            speak(
+                                'I am MIAMI, An artificial intelligence, or you can say a virtual personal assistant developed by Mr. Mashud')
+                        
+                        elif 'open facebook' in voice_note:
+                            webbrowser.open("https://www.facebook.com/")
+                            speak("Opening Facebook")                            
+                        elif 'open github' in voice_note:
+                            webbrowser.open("https://www.github.com/")
+                            speak("Opening Github")            
+                        elif 'open chat' in voice_note:
+                            webbrowser.open("https://chat.openai.com/")
+                            speak("Opening ChatGPT")            
+                        elif 'open google' in voice_note:
+                            webbrowser.open("https://google.com/")
+                            speak("Opening Google")                            
+                        elif 'open stackoverflow' in voice_note:
+                            webbrowser.open("https://stackoverflow.com/")
+                            speak("Opening ")                            
+                        elif 'open youtube' in voice_note:
+                            webbrowser.open("https://youtube.com/")
+                            speak("Opening Youtube")                            
+                        elif 'open whatsapp' in voice_note:
+                            if 'web' in voice_note:
                                 webbrowser.open("https://web.whatsapp.com/")
-                                speak("opening ")
-                            elif 'music' in voice_note and 'youtube' in voice_note and 'my' in voice_note:
-                                webbrowser.open("https://www.youtube.com/watch?v=q2-HquLLmSw&t=35s")
-                                speak("opening ")
-                            elif ('show' in voice_note or 'open' in voice_note) and 'mail' in voice_note:
-                                webbrowser.open('https://mail.google.com/mail/u/0/#inbox')
-                                speak('opening your mails ')
-                                continue
-                            elif ('pause' in voice_note or 'play' in voice_note or 'resume' in voice_note) and 'music' in voice_note :
-                                pyautogui.hotkey('playpause')
-                                continue
-                            elif 'unlock' in voice_note and ('system' in voice_note or 'pc' in voice_note or 'com' in voice_note):
-                                '''
-                                if log_info == "unlocked" :
-                                    speak(" your pc is already unlocked")
-                                else:
-                                    '''
-                                ctypes.windll.user32.LockWorkStation()
+                            else:
+                                subprocess.Popen(["cmd", "/C", "start whatsapp://"], shell=True)
+                            speak("Opening WhatsApp")
+                        elif 'music' in voice_note and 'youtube' in voice_note and 'my' in voice_note:
+                            webbrowser.open("https://www.youtube.com/watch?v=q2-HquLLmSw&t=35s")
+                            speak("opening ")
+                        elif ('show' in voice_note or 'open' in voice_note) and 'mail' in voice_note:
+                            webbrowser.open('https://mail.google.com/mail/u/0/#inbox')
+                            speak('opening your mails ')                            
+                        elif ('pause' in voice_note or 'play' in voice_note or 'resume' in voice_note) and 'music' in voice_note :
+                            pyautogui.hotkey('playpause')
+                            
+                        elif 'unlock' in voice_note and ('system' in voice_note or 'pc' in voice_note or 'com' in voice_note):
+                            test = is_computer_locked()
+                            if test:
                                 speak("unlocking :")
                                 pyautogui.press('enter')
                                 pyautogui.press('enter')
-                                speak('Please use password to unlock  ')
-                                time.sleep(1)
-                                continue
-                            elif 'mute' in voice_note:
-                                mute()
-                                # speak('Done')
-                            elif 'unmute' in voice_note:
+                                speak('Please use PIN to unlock')
+                                time.sleep(1)                                                                                                 
+                            else:
+                                speak('Computer is already unlocked')                              
+                                           
+                        elif 'mute' in voice_note:
+                            mute()
+                            # speak('Done')
+                        elif 'unmute' in voice_note:
+                            volume_up()
+                            # speak('Done ')
+                        elif 'volume' in voice_note:
+                            if 'up' in voice_note:
                                 volume_up()
-                                # speak('Done ')
-                            elif 'volume' in voice_note:
-                                if 'up' in voice_note:
-                                    volume_up()
-                                    # speak('Volumed up ')
-                                    continue
-                                elif 'down' in voice_note or 'reduce' in voice_note:
-                                    volume_down()
-                                    # speak('Volumed Reduced ')
-                                    continue
-                                elif 'set' in voice_note or 'by' in voice_note:
+                                # speak('Volumed up ')
+                                
+                            elif 'down' in voice_note or 'reduce' in voice_note:
+                                volume_down()
+                                # speak('Volumed Reduced ')
+                                
+                            elif 'set' in voice_note or 'by' in voice_note:
+                                percentage = re.findall(r'[0-9]+', voice_note)
+                                if len(percentage) == 0:
+                                    speak("By How many percent ?")
+                                    voice_note = listen().lower()
                                     percentage = re.findall(r'[0-9]+', voice_note)
                                     if len(percentage) == 0:
-                                        speak("By How many percent ?")
-                                        voice_note = rec_voice().lower()
-                                        percentage = re.findall(r'[0-9]+', voice_note)
-                                        if len(percentage) == 0:
-                                            speak("Sorry, I am not able to understand")
-                                            pass
-                                        else:
-                                            per = int(percentage[0])
-                                            set_volume(per)
-                                            speak('volume set to ' + str(per) + ' percent ')
-                                            continue
+                                        speak("Sorry, I am not able to understand")
+                                        pass
                                     else:
                                         per = int(percentage[0])
                                         set_volume(per)
-                                        speak('volume set to' + str(per) + 'percent ')
-                                        continue
+                                        speak('volume set to ' + str(per) + ' percent ')
+                                        
                                 else:
-                                    speak(
-                                        'sorry , i do not understand what to do with volume setting. please try again.')
-                            elif 'search' in voice_note and ('google' in voice_note or 'youtube' in voice_note):
-                                voice_note = voice_note.replace('search', '', 1)
-                                voice_note = voice_note.replace('on', '', 1)
-                                voice_note = voice_note.replace(' for ', '', 1)
-                                if 'google' in voice_note:
-                                    voice_note = voice_note.replace('google', '', 1)
-                                    webbrowser.open('https://www.google.com/search?q={}'.format(voice_note))
-                                    speak('Searching on google ')
-                                    continue
-                                elif 'youtube' in voice_note:
-                                    voice_note = voice_note.replace('youtube', '', 1)
-                                    webbrowser.open(
-                                        'https://www.youtube.com/results?search_query={}'.format(voice_note))
-                                    speak('searching on youtube ')
-                                    continue                          
-
-
-                            elif ('system' in voice_note or 'computer' in voice_note or 'pc' in voice_note) and (
-                                    'shut' in voice_note or 'reboot' in voice_note or 'restart' in voice_note):
-                                if 'shut' in voice_note:
-                                    speak("Are you sure you want to shut down the system")
-                                    confirmation = rec_voice().lower()
-                                    if ('yes' or 'please') in confirmation:
-                                        speak('shutting down system')
-                                        speak(' Bye  and take care ')
-                                        os.system('shutdown -s -t 0')
-                                    else:
-                                        speak('As you wish')
-                                elif 'rest' in voice_note or 'boot' in voice_note:
-                                    speak("Are you sure you want to restart the system")
-                                    confirmation = rec_voice().lower()
-                                    if ('yes' or 'please') in confirmation:
-                                        speak('restarting the system')
-                                        os.system('shutdown -r -t 0')
-                                    else:
-                                        speak('As you wish')                              
-                            
-                            elif 'chrome' in voice_note or 'browser' in voice_note:
-                                if 'open' in voice_note:
-                                    os.popen('start chrome')
-                                    speak('opening ')
-                                    continue
-                                elif 'close' in voice_note:
-                                    os.popen('tskill chrome')
-                                    speak('done')
-                                    continue
-                                else:
-                                    speak('sorry i did not got it please try again')
-                                    continue
-                            elif ( 'notepad' in voice_note or 'write something' in voice_note) and 'i ' in voice_note or 'note something' in voice_note or ' note' in voice_note:
-                                if 'open' in voice_note or 'something' in voice_note:
-                                    os.popen('start notepad')
-                                    if 'open' in voice_note:
-                                        speak('ok ')
-                                        continue
-                                    else:
-                                        speak('ok  i am opening notepad for you')
-                                        continue
-                                elif 'close' in voice_note:
-                                    os.popen('tskill notepad')
-                                    speak('as you wish ')
-                                    continue
-                                else:
-                                    speak('sorry  i didnot got it please try again')
-                                    continue
-                            elif 'window' in voice_note:
-                                if 'close' in voice_note:
-                                    pyautogui.hotkey('alt', 'f4')
-                                    speak('closed ')
-                                    continue
-                                elif 'mini' in voice_note:
-                                    pyautogui.hotkey('win', 'm')
-                                    speak('as you wish ')
-                                    continue
-                                elif 'max' in voice_note:
-                                    pyautogui.hotkey('win', 'up')
-                                    speak('Done ')
-                                elif 'small' in voice_note:
-                                    pyautogui.hotkey('win', 'down')
-                                    speak('as you wish ')
-                                else:
-                                    speak('sorry  i did not got it, please say it once')
-                            elif 'thank' in voice_note and 'you' in voice_note :
-                                speak("You're welcome . i'm just doing my job.")
-                                continue
-                            elif 'weather' in voice_note or 'temperature' in voice_note:
-                                if 'temp' in voice_note:
-                                    weather('temp')
-                                    continue
-                                else:
-                                    weather('status')
-                                    continue                                
-                            elif re.search(r'news', voice_note, re.IGNORECASE):
-                                speak('Fetching todays news please wait')
-                                news()                            
-                            elif re.search(r'\b(extend display|dual display|coding time|work time)\b', voice_note):
-                                os.popen('DisplaySwitch.exe /extend')                            
-                                if('coding' in voice_note):
-                                    speak('Extending display and opening vs code.')
-                                else:
-                                    speak("Extending display.") 
-                            elif re.search(r'\b(switch to display 1|gaming display|gaming time|movie time|dinner time)\b', voice_note):
-                                os.popen('DisplaySwitch.exe /internal')
-                                if('gaming' in voice_note):
-                                    speak('Enjoy Gaming')
-                                elif('dinner' in voice_note):
-                                    speak("enjoy dinner time and what you want to prefer Youtube or Netflix?")
-                                    preference = rec_voice()
-                                    if ('youtube' in voice_note):
-                                        webbrowser.open("https://youtube.com/")
-                                    elif('net' in voice_note):
-                                        webbrowser.open("https://www.netflix.com/browse")
-                                    elif ('' or ' nothing' in voice_note):
-                                        speak('okay')
-                                    else:
-                                        webbrowser.open('https://www.google.com/search?q={}'.format(preference))
-                            # elif 'set' in voice_note and 'alarm' in voice_note:
-                            #     alarm(voice_note)
-                            elif 'make' in voice_note and 'note' in voice_note:
-                                speak('tell me  what to write')
-                                voice_note = rec_voice()
-                                txt = open('C:\\Users\\mashu\\masu.txt', 'a+')
-                                txt.write('%s\r\n' % (voice_note))
-                                txt.close()
-                                speak('Nooted ')
-                                speak('want to see the note ')
-                                voice_note = rec_voice().lower()
-                                if 'yes' in voice_note or 'open' in voice_note:
-                                    os.popen('notepad ' "C:\\Users\\mashu\\masu.txt" '')
-                                    speak('should i read it for you ')
-                                    voice_note = rec_voice().lower()
-                                    if 'yes' in voice_note or 'read' in voice_note:
-                                        pyautogui.hotkey('ctrl', 'a')
-                                        reader()
-                                        pyautogui.hotkey('alt', 'f4')
-                                    else:
-                                        speak('As you wish ')
-                                        continue
-                                else:
-                                    speak('As you wish ')
-                                continue
-                            elif "this pc" in voice_note:
-                                speak("Wait a Second :")
-                                subprocess.Popen('explorer.exe /e,::{20D04FE0-3AEA-1069-A2D8-08002B30309D}')
-                                speak("Here You GO ")
-                                continue
-                            elif ' c' in voice_note and 'drive' in voice_note:
-                                subprocess.Popen('explorer C:\\')
-                                speak("Opening Drive C ")
-                                continue
-                            elif ' d ' in voice_note and 'drive' in voice_note:
-                                subprocess.Popen('explorer D:\\')
-                                speak("Opening Drive D ")
-                                continue
-                            elif ' e ' in voice_note and 'drive' in voice_note:
-                                subprocess.Popen('explorer E:\\')
-                                speak("Opening Drive E ")
-                                continue
-                            elif ' f' in voice_note and 'drive' in voice_note:
-                                subprocess.Popen('explorer F:\\')
-                                speak("Opening Drive F ")
-                                continue
-                            elif ' g' in voice_note and 'drive' in voice_note:
-                                subprocess.Popen('explorer G:\\')
-                                speak("Opening Drive G ")
-                                continue
-                            elif ' h' in voice_note and 'drive' in voice_note:
-                                subprocess.Popen('explorer H:\\')
-                                speak("Opening Drive H")
-                                continue
-                            elif ' drive ' in voice_note:
-                                speak("Sorry  There is no drive like that ")
-                                continue
-                            elif 'lock' in voice_note and ('system' in voice_note or 'pc' in voice_note or 'com' in voice_note):
-                                speak("locking ")
-                                ctypes.windll.user32.LockWorkStation()
-                                continue
-                            elif ('source' in voice_note or 'your' in voice_note) and 'code' in voice_note:
-                                speak('opening my source code')
-                                m = 'C:\\Users\\mashu\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\pvporcupinedemo\\porcupine_demo_mic.py'
-                                os.system("start {}".format(m))
-                                continue
-                            elif 'open' in voice_note and ('code' in voice_note or 'editor' in voice_note):
-                                speak('Opening V S Code ')
-                                os.popen('start code')
-                                continue
-                            elif "open drive" in voice_note:
-                                speak('Which Drive Do You want to Open ?')
-                                try:
-                                    voice_note = rec_voice().lower()
-                                    voice_note = voice_note + " "
-                                    print(voice_note)
-                                    if "this pc" in voice_note:
-                                        speak("Wait a Second :")
-                                        subprocess.Popen('explorer.exe /e,::{20D04FE0-3AEA-1069-A2D8-08002B30309D}')
-                                        speak("Here You GO ")
-                                        continue
-                                    elif 'c' in voice_note:
-                                        subprocess.Popen('explorer C:\\')
-                                        continue
-                                    elif 'd' in voice_note:
-                                        subprocess.Popen('explorer D:\\')
-                                        continue
-                                    elif 'e' in voice_note:
-                                        subprocess.Popen('explorer E:\\')
-                                        continue
-                                    elif 'f' in voice_note:
-                                        subprocess.Popen('explorer F:\\')
-                                        continue
-                                    elif 'g' in voice_note:
-                                        subprocess.Popen('explorer G:\\')
-                                        continue
-                                    elif 'h' in voice_note:
-                                        subprocess.Popen('explorer H:\\')
-                                        continue
-                                    else:
-                                        speak("Sorry  there is no drive like you said")
-                                        continue
-                                except IndexError:
-                                    pass
-                            elif ('right' in voice_note or 'write' in voice_note) and 'something' in voice_note:
-                                speak('ok  go to space where you want to type')
-                                speak('Now tell me  what to right')
-                                voice_note = rec_voice().lower()
-                                pyautogui.write(voice_note)
-                                while True:
-                                    speak('done , and do you want to right more ')
-                                    voice_note = rec_voice().lower()
-                                    if 'yes' in voice_note:
-                                        speak('ok  tell me what to right next')
-                                        voice_note = rec_voice().lower()
-                                        pyautogui.write(' ' + voice_note)
-                                        continue
-                                    else:
-                                        speak('as you wish ')
-                                        break
-                            elif (
-                                    'write' in voice_note or 'right' in voice_note or 'type' in voice_note) and 'here' in voice_note:
-                                word_filter(voice_note)
-                                while True:
-                                    speak('done , and do you want to write more ')
-                                    voice_note = rec_voice().lower()
-                                    if 'yes' in voice_note:
-                                        speak('ok  tell me what to write next')
-                                        voice_note = rec_voice().lower()
-                                        pyautogui.write(' ' + voice_note)
-                                        continue
-                                    else:
-                                        speak('as you wish ')
-                                        break
-                            elif re.search(r'\b(time)\b', voice_note):
-                                hour = int(datetime.datetime.now().hour)
-                                strTime = datetime.datetime.now().strftime("%H,%M")
-                                if hour >= 0 and hour < 12:
-                                    speak(f", the time is {strTime},AM")
-                                else:
-                                    lem = int(strTime[:2])
-                                    lem = (lem - 12)
-                                    strTime = datetime.datetime.now().strftime('%M')
-                                    speak(f", the time is {lem, strTime},PM")
-                                continue
-                            elif 'read' in voice_note:
-                                speak('ok make sure you have already selected what to read')
-                                reader()
-                            elif 'speed' in voice_note and ('net' in voice_note or 'network' in voice_note):
-                                speak('showing the result in new window ')
-                                os.system("start /B start cmd.exe @cmd /k speedtest-cli ")
-                                continue
-                            elif ('like' in voice_note or 'love' in voice_note) and 'me' in voice_note:
-                                speak("Yes! A thousand times yes")
-                                continue
-                            elif re.search(r'\b(?:log|file)\b', voice_note):
-                                speak('Opening log file')
-                                os.popen('notepad ' "C:\\Users\\mashu\\log.txt" '')
-                                continue            
-                            
-                            elif 'open' in voice_note and ' 'in voice_note:
-                                voice_note=voice_note.replace('open','',1)
-                                voice_note = voice_note.replace('application','',1)
-                                voice_note = voice_note.replace('app','',1)
-                                speak(' do you want me to open {}, application ?'.format(voice_note))
-                                confirmation = rec_voice().lower()
-                                if 'yes' in confirmation :
-                                    pyautogui.press('win')
-                                    pyautogui.write(voice_note)
-                                    time.sleep(1)
-                                    pyautogui.hotkey('enter')
-                                    speak('Here You go ')
-                                else:
-                                    speak('as you wish ')
-                                    continue
-                            elif 'play ' in voice_note:
-                                voice_note = voice_note.replace('play', '',1)
-                                speak("Playing on youtube")
-                                play_first_youtube_video(voice_note)
-                                continue
-                            elif 'mean' in voice_note or 'meaning' in voice_note:
-                                dictionary(voice_note)
-                                continue
-                            elif 'do ' in voice_note or 'what' in voice_note or (
-                                    'who' in voice_note or 'where' in voice_note and 'is' in voice_note):
+                                    per = int(percentage[0])
+                                    set_volume(per)
+                                    speak('volume set to' + str(per) + 'percent ')
+                                    
+                            else:
                                 speak(
-                                    'Showing answer with the help of the google')
+                                    'sorry , i do not understand what to do with volume setting. please try again.')
+                        elif 'search' in voice_note and ('google' in voice_note or 'youtube' in voice_note):
+                            voice_note = voice_note.replace('search', '', 1)
+                            voice_note = voice_note.replace('on', '', 1)
+                            voice_note = voice_note.replace(' for ', '', 1)
+                            if 'google' in voice_note:
+                                voice_note = voice_note.replace('google', '', 1)
                                 webbrowser.open('https://www.google.com/search?q={}'.format(voice_note))
-                                time.sleep(2)
-                                pyautogui.hotkey('down')
-                                pyautogui.hotkey('down')
-                                continue
-                            elif any(keyword in voice_note for keyword in ['sleep', 'stop ask', 'stop lis']):
-                                speak('Ok, call me when you need assistance.')
-                                audcheck = 2
-                                print(':: Waiting for wakeword detection ::')
-                                slp = 1
-                            elif re.search(r'\b(bye|goodbye|quit)\b', voice_note, re.IGNORECASE):
-                                # Your code for handling goodbye actions
-                                speak('Do you want me to quit ?')
-                                check = rec_voice().lower()
-                                if( 'yes' in check ):
-                                    speak('Okay tell me the exit code to proceed')
-                                    exitcode =rec_voice().lower()
-                                    if '8' in exitcode and '0' in exitcode and '2' in exitcode :
-                                        speak(random.choice(["Goodbye!", "See you later!", "Take care!"]))
-                                        os.system('taskkill /IM "porcupine_demo_mic.exe" /F')
-                                        time.sleep(1)                                
-                                        os.system('taskkill /IM "cmd.exe" /F')                                    
-                                    else:
-                                        speak('Sorry it doesnot match with the exit code, I will be online and call me when you need assistance')
-                                else:
-                                    audcheck = 2
-                                    print(':: Waiting for wakeword detection ::')  
-                                    slp = 1                  
-                            elif ('update' in voice_note or 'restart' in voice_note or 'reboot' in voice_note) and (
-                                    'program' in voice_note or 'self' in voice_note or 'code' in voice_note):
-                                responses = [
-                                        "Sure thing! Initiating the update process.",
-                                        "Updating now. This won't take long.",
-                                        "Acknowledged. I'll update the program accordingly.",
-                                        "Updating in progress. Please be patient.",
-                                        "Got it! I'll get the latest updates for you.",
-                                    ]
-                                speak(random.choice(responses))
-                                os.system('porcupine_demo_mic --access_key uX5rsH7XMmSI5Aey1irLgr+R4OiwiTZch0L/JIIZLwZDjCZgauAaZg== --keywords miami --audio_device_index 1')
-                                exit()
-                            elif 'goodnight' in voice_note or 'night' in voice_note:
-                                speak(random.choice(["Goodnight!", "Sweet dreams!", "Sleep well!"])+" and do you want me to shut down the system?")                            
-                                altq = rec_voice().lower()
-                                if 'yes' in altq or 'shut down' in altq:
-                                    speak(" i need confirmation password to shutdown the system")
-                                    shutdown_sys('shut down')
+                                speak('Searching on google ')
+                                
+                            elif 'youtube' in voice_note:
+                                voice_note = voice_note.replace('youtube', '', 1)
+                                webbrowser.open(
+                                    'https://www.youtube.com/results?search_query={}'.format(voice_note))
+                                speak('searching on youtube ')
+                                                          
+
+
+                        elif ('system' in voice_note or 'computer' in voice_note or 'pc' in voice_note) and (
+                                'shut' in voice_note or 'reboot' in voice_note or 'restart' in voice_note or 'turn off' in voice_note):
+                            if 'shut' in voice_note:
+                                speak("Are you sure you want to shut down the system")
+                                confirmation = listen2().lower()
+                                if ('yes' or 'please') in confirmation:
+                                    speak('shutting down system')
+                                    speak(' Bye  and take care ')
+                                    os.system('shutdown -s -t 0')
                                 else:
                                     speak('As you wish')
-                            elif voice_note:
-                                random_messages = [
-                                    "Sorry, I'm not familiar with that phrase. Try asking me something else.",
-                                    "I'm not sure about that statement. Ask me a different question, please.",
-                                    "Hmm, this is new to me. Feel free to inquire about something else.",
-                                    "I didn't quite catch that. Can you try rephrasing your question or ask something else?",
-                                ]
-                                random_message = random.choice(random_messages)
-                                speak(random_message)
-                        except Exception as e:
-                            if e == 'listening timed out while waiting for phrase to start':
-                                pass
+                            elif 'rest' in voice_note or 'boot' in voice_note:
+                                speak("Are you sure you want to restart the system")
+                                confirmation = listen2().lower()
+                                if ('yes' or 'please') in confirmation:
+                                    speak('restarting the system')
+                                    os.system('shutdown -r -t 0')
+                                else:
+                                    speak('As you wish')
                             else:
-                                with open(__file__, 'r') as f:
-                                    lines = f.read().split('\n')
-                                    val = int(lines[0].split(' = ')[+1])
-                                    new_line = 'failsafe_check = {}'.format(val+1)
-                                    new_file = '\n'.join([new_line] + lines[1:])
-                                with open(__file__, 'w') as f:
-                                    f.write('\n'.join([new_line] + lines[1:]))
-                                speak('There is a glitch in my program. please solve it, i am opening the source code and error details for you.')
-                                m = 'C:\\Users\\mashu\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\pvporcupinedemo\\porcupine_demo_mic.py'
-                                os.system("start {}".format(m))
-                                txt = open('C:\\Users\\mashu\\error.txt', 'a+')
-                                txt.write('%s\r\n' % (e))
-                                txt.close()
-                                os.popen('notepad ' "C:\\Users\\mashu\\error.txt" '')
-                                # os.system('python C:\\Users\\mashu\\fix.py')
-                                # exit()
-                        time.sleep(1)
+                                speak('Exception occure at restart')                             
+                        
+                        elif 'chrome' in voice_note or 'browser' in voice_note:
+                            if 'open' in voice_note:
+                                os.popen('start chrome')
+                                speak('opening ')
+                                
+                            elif 'close' in voice_note:
+                                os.popen('tskill chrome')
+                                speak('done')
+                                
+                            else:
+                                speak('sorry i did not got it please try again')
+                                
+                        elif ( 'notepad' in voice_note or 'write something' in voice_note) and 'i ' in voice_note or 'note something' in voice_note or ' note' in voice_note:
+                            if 'open' in voice_note or 'something' in voice_note:
+                                os.popen('start notepad')
+                                if 'open' in voice_note:
+                                    speak('ok ')
+                                    
+                                else:
+                                    speak('ok  i am opening notepad for you')
+                                    
+                            elif 'close' in voice_note:
+                                os.popen('tskill notepad')
+                                speak('as you wish ')
+                                
+                            else:
+                                speak('sorry  i didnot got it please try again')
+                                
+                        elif 'window' in voice_note:
+                            if 'close' in voice_note:
+                                pyautogui.hotkey('alt', 'f4')
+                                speak('closed ')
+                                
+                            elif 'mini' in voice_note:
+                                pyautogui.hotkey('win', 'm')
+                                speak('as you wish ')
+                                
+                            elif 'max' in voice_note:
+                                pyautogui.hotkey('win', 'up')
+                                speak('Done ')
+                            elif 'small' in voice_note:
+                                pyautogui.hotkey('win', 'down')
+                                speak('as you wish ')
+                            else:
+                                speak('sorry  i did not got it, please say it once')
+                        elif 'thank' in voice_note and 'you' in voice_note :
+                            speak("You're welcome . i'm just doing my job.")
+                            
+                        elif 'weather' in voice_note or 'temperature' in voice_note:
+                            if 'temp' in voice_note:
+                                weather('temp')
+                                
+                            else:
+                                weather('status')
+                                                                
+                        elif re.search(r'news', voice_note, re.IGNORECASE):
+                            speak('Fetching todays news please wait')
+                            news()                            
+                        elif re.search(r'\b(extend display|dual display|coding time|work time)\b', voice_note):
+                            os.popen('DisplaySwitch.exe /extend')                            
+                            if('coding' in voice_note):
+                                speak('Extending display and opening vs code.')
+                            else:
+                                speak("Extending display.") 
+                        elif re.search(r'\b(switch to display 1|gaming display|gaming time|movie time|dinner time)\b', voice_note):
+                            os.popen('DisplaySwitch.exe /internal')
+                            if('gaming' in voice_note):
+                                speak('Enjoy Gaming')
+                            elif('dinner' in voice_note):
+                                speak("enjoy dinner time and what you want to prefer Youtube or Netflix?")
+                                preference = listen()
+                                if ('youtube' in voice_note):
+                                    webbrowser.open("https://youtube.com/")
+                                elif('net' in voice_note):
+                                    webbrowser.open("https://www.netflix.com/browse")
+                                elif ('' or ' nothing' in voice_note):
+                                    speak('okay')
+                                else:
+                                    webbrowser.open('https://www.google.com/search?q={}'.format(preference))
+                        # elif 'set' in voice_note and 'alarm' in voice_note:
+                        #     alarm(voice_note)
+                        elif 'make' in voice_note and 'note' in voice_note:
+                            speak('tell me  what to write')
+                            voice_note = listen()
+                            txt = open('C:\\Users\\mashu\\masu.txt', 'a+')
+                            txt.write('%s\r\n' % (voice_note))
+                            txt.close()
+                            speak('Nooted ')
+                            speak('want to see the note ')
+                            voice_note = listen().lower()
+                            if 'yes' in voice_note or 'open' in voice_note:
+                                os.popen('notepad ' "C:\\Users\\mashu\\masu.txt" '')
+                                speak('should i read it for you ')
+                                voice_note = listen2().lower()
+                                if 'yes' in voice_note or 'read' in voice_note:
+                                    pyautogui.hotkey('ctrl', 'a')
+                                    reader()
+                                    pyautogui.hotkey('alt', 'f4')
+                                else:
+                                    speak('As you wish ')
+                                    
+                            else:
+                                speak('As you wish ')
+                            
+                        elif "this pc" in voice_note:
+                            speak("Wait a Second :")
+                            subprocess.Popen('explorer.exe /e,::{20D04FE0-3AEA-1069-A2D8-08002B30309D}')
+                            speak("Here You GO ")
+                            
+                        elif ' c' in voice_note and 'drive' in voice_note:
+                            subprocess.Popen('explorer C:\\')
+                            speak("Opening Drive C ")
+                            
+                        elif ' d ' in voice_note and 'drive' in voice_note:
+                            subprocess.Popen('explorer D:\\')
+                            speak("Opening Drive D ")
+                            
+                        elif ' e ' in voice_note and 'drive' in voice_note:
+                            subprocess.Popen('explorer E:\\')
+                            speak("Opening Drive E ")
+                            
+                        elif ' f' in voice_note and 'drive' in voice_note:
+                            subprocess.Popen('explorer F:\\')
+                            speak("Opening Drive F ")
+                            
+                        elif ' g' in voice_note and 'drive' in voice_note:
+                            subprocess.Popen('explorer G:\\')
+                            speak("Opening Drive G ")
+                            
+                        elif ' h' in voice_note and 'drive' in voice_note:
+                            subprocess.Popen('explorer H:\\')
+                            speak("Opening Drive H")
+                            
+                        elif ' drive ' in voice_note:
+                            speak("Sorry  There is no drive like that ")                                                      
+                        
+                        elif ('update' in voice_note or 'restart' in voice_note or 'reboot' in voice_note) and (
+                                'program' in voice_note or 'self' in voice_note or 'code' in voice_note or 'system' in voice_note):
+                            if 'system' in voice_note:
+                                speak('Its beyond my capability right now. Try something else')
+                                continue
+                            responses = [
+                                "Sure thing! Initiating the update process.",
+                                "Updating now. This won't take long.",
+                                "Acknowledged. I'll update the program accordingly.",
+                                "Updating in progress. Please be patient.",
+                                "Got it! I'll get the latest updates for you.",
+                            ]
+                            speak(random.choice(responses))
+                            os.system('porcupine_demo_mic --access_key uX5rsH7XMmSI5Aey1irLgr+R4OiwiTZch0L/JIIZLwZDjCZgauAaZg== --keywords miami --audio_device_index 1')
+                            exit()
+
+                        elif ('source' in voice_note or 'your' in voice_note) and 'code' in voice_note:
+                            speak('opening my source code')
+                            m = 'C:\\Users\\mashu\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\pvporcupinedemo\\porcupine_demo_mic.py'
+                            os.system("start {}".format(m))
+                            
+                        elif 'open' in voice_note and ('code' in voice_note or 'editor' in voice_note):
+                            speak('Opening V S Code ')
+                            os.popen('start code')
+                            
+                        elif "open drive" in voice_note:
+                            speak('Which Drive Do You want to Open ?')
+                            try:
+                                voice_note = listen().lower()
+                                voice_note = voice_note + " "
+                                print(voice_note)
+                                if "this pc" in voice_note:
+                                    speak("Wait a Second :")
+                                    subprocess.Popen('explorer.exe /e,::{20D04FE0-3AEA-1069-A2D8-08002B30309D}')
+                                    speak("Here You GO ")
+                                    
+                                elif 'c' in voice_note:
+                                    subprocess.Popen('explorer C:\\')
+                                    
+                                elif 'd' in voice_note:
+                                    subprocess.Popen('explorer D:\\')
+                                    
+                                elif 'e' in voice_note:
+                                    subprocess.Popen('explorer E:\\')
+                                    
+                                # elif 'f' in voice_note:
+                                #     subprocess.Popen('explorer F:\\')
+                                    
+                                # elif 'g' in voice_note:
+                                #     subprocess.Popen('explorer G:\\')
+                                    
+                                # elif 'h' in voice_note:
+                                #     subprocess.Popen('explorer H:\\')
+                                    
+                                else:
+                                    speak("Sorry  there is no drive like you said")
+                                    
+                            except IndexError:
+                                pass
+                        elif ('right' in voice_note or 'write' in voice_note) and 'something' in voice_note:
+                            speak('ok  go to space where you want to type')
+                            speak('Now tell me  what to right')
+                            voice_note = listen().lower()
+                            pyautogui.write(voice_note)
+                            while True:
+                                speak('done , and do you want to right more ')
+                                voice_note = listen().lower()
+                                if 'yes' in voice_note:
+                                    speak('ok  tell me what to right next')
+                                    voice_note = listen().lower()
+                                    pyautogui.write(' ' + voice_note)
+                                    continue
+                                else:
+                                    speak('as you wish ')
+                                    break
+                        elif (
+                                'write' in voice_note or 'right' in voice_note or 'type' in voice_note) and 'here' in voice_note:
+                            word_filter(voice_note)
+                            while True:
+                                speak('done , and do you want to write more ')
+                                voice_note = listen2().lower()
+                                if 'yes' in voice_note:
+                                    speak('ok  tell me what to write next')
+                                    voice_note = listen().lower()
+                                    pyautogui.write(' ' + voice_note)
+                                    continue
+                                else:
+                                    speak('as you wish ')
+                                    break
+                        elif re.search(r'\b(time)\b', voice_note):
+                            current_time = datetime.datetime.now()
+                            strTime = current_time.strftime("%I:%M %p")
+                            speak(f"The time is {strTime}")
+                            
+                        elif 'read' in voice_note:
+                            speak('ok make sure you have already selected what to read')
+                            reader()
+                        elif 'speed' in voice_note and ('net' in voice_note or 'network' in voice_note):
+                            speak('showing the result in new window ')
+                            os.system("start /B start cmd.exe @cmd /k speedtest-cli ")
+                            
+                        elif ('like' in voice_note or 'love' in voice_note) and 'me' in voice_note:
+                            speak("Yes! A thousand times yes")
+                            
+                        elif re.search(r'\b(?:log|file)\b', voice_note):
+                            speak('Opening log file')
+                            os.popen('notepad ' "C:\\Users\\mashu\\log.txt" '')
+                                        
+                        
+                        elif 'open' in voice_note and ' 'in voice_note:
+                            filename = r'C:\\Users\\mashu\\Ai\\installed_apps.txt'
+                            installed_apps = read_installed_apps(filename)
+                            if installed_apps:
+                                if 'open' in voice_note or 'application' in voice_note or 'app' in voice_note:
+                                    voice_note =voice_note.replace('mail','gmail')
+                                    matched_apps = [app_name for app_name in installed_apps if app_name in voice_note]
+                                    if matched_apps:
+                                        speak(f"Opening {matched_apps[0]}...")
+                                        open_app_by_id(installed_apps[matched_apps[0]])
+                                    elif 'cmd' in voice_note or 'command' in voice_note or 'prompt' in voice_note:
+                                        os.system("start cmd")
+                                        speak('Opening Command Promt')
+                                    else:
+                                        voice_note = voice_note.replace('open', '').replace('application', '').replace('app', '').strip()                                
+                                        webbrowser.open('https://www.google.com/search?q={}'.format(voice_note))
+                                        speak('Opening in browser')
+                                        time.sleep(1)
+                                        pyautogui.hotkey('down')
+                                        pyautogui.hotkey('down')
+                                else:
+                                    print("Error: 'open', 'application', or 'app' not found in input.")
+                            else:
+                                speak('Sorry try again')                              
+                                
+                        elif 'play ' in voice_note:
+                            voice_note = voice_note.replace('play', '',1)
+                            speak("Playing on youtube")
+                            play_first_youtube_video(voice_note)
+                            
+                        elif 'mean' in voice_note or 'meaning' in voice_note:
+                            dictionary(voice_note)
+                            
+                        elif 'am i' in voice_note or "my name" in voice_note or 'made you' in voice_note or 'created you' in voice_note or 'you know me' in voice_note or 'developed you' in voice_note:
+                            if 'you know me' in voice_note:
+                                speak('Yes, i know You , you are my creator, Mr. Mashud')
+                                
+                            else:
+                                speak("Mr. Mashud")
+                                
+                        elif 'do ' in voice_note or 'what' in voice_note or (
+                                'who' in voice_note or 'where' in voice_note and 'is' in voice_note):
+                            speak(
+                                'Showing answer with the help of the google')
+                            webbrowser.open('https://www.google.com/search?q={}'.format(voice_note))
+                            time.sleep(2)
+                            pyautogui.hotkey('down')
+                            pyautogui.hotkey('down')
+                            
+                        elif any(keyword in voice_note for keyword in ['sleep', 'stop ask', 'stop lis']):
+                            speak('Ok, call me when you need assistance.')
+                            
+                        elif re.search(r'\b(bye|goodbye|quit|kill yourself)\b', voice_note, re.IGNORECASE):
+                            # Your code for handling goodbye actions
+                            speak('Do you want me to quit ?')
+                            check = listen2().lower()
+                            if( 'yes' in check ):
+                                speak('Okay tell me the exit code to proceed')
+                                exitcode =listen().lower()
+                                if '8' in exitcode and '0' in exitcode and '2' in exitcode :
+                                    speak(random.choice(["Goodbye!", "See you later!", "Take care!"]))
+                                    os.system('taskkill /IM "porcupine_demo_mic.exe" /F')
+                                    time.sleep(1)                                
+                                    os.system('taskkill /IM "cmd.exe" /F')
+                                elif 'no' in exitcode:
+                                    speak('Sorry Cannot proceed without exit code')                                                                            
+                                else:
+                                    speak('Sorry it doesnot match with the exit code, I will be online and call me when you need assistance')
+                            else:
+                                speak("As you wish")
+                                audcheck = 2
+                                print(':: Waiting for wakeword detection ::')  
+                                slp = 1                  
+                        
+                        elif 'goodnight' in voice_note or 'night' in voice_note:
+                            speak(random.choice(["Goodnight!", "Sweet dreams!", "Sleep well!"])+" and do you want me to shut down the system?")                            
+                            altq = listen2().lower()
+                            if 'yes' in altq or 'shut down' in altq:
+                                speak('shutting down system')
+                                speak('Bye and take care')
+                                os.system('shutdown -s -t 0')
+                            else:
+                                speak('As you wish')
+                        else:
+                            random_messages = [
+                                "Sorry, I'm not familiar with that phrase. Try asking me something else.",
+                                "I'm not sure about that statement. Ask me a different question, please.",
+                                "Hmm, this is new to me. Feel free to inquire about something else.",
+                                "I didn't quite catch that. Can you try rephrasing your question or ask something else?",
+                            ]
+                            random_message = random.choice(random_messages)
+                            speak(random_message)
+                        print('::Waiting for wakeword detection::')
+                    except Exception as e:
+                        if e == 'listening timed out while waiting for phrase to start':
+                            print('Exception occure in e')
+                            pass
+                        else:
+                            with open(__file__, 'r') as f:
+                                lines = f.read().split('\n')
+                                val = int(lines[0].split(' = ')[+1])
+                                new_line = 'failsafe_check = {}'.format(val+1)
+                                new_file = '\n'.join([new_line] + lines[1:])
+                            with open(__file__, 'w') as f:
+                                f.write('\n'.join([new_line] + lines[1:]))
+                            speak('There is a glitch in my program. please solve it, i am opening the source code and error details for you.')
+                            m = 'C:\\Users\\mashu\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\pvporcupinedemo\\porcupine_demo_mic.py'
+                            os.system("start {}".format(m))
+                            txt = open('C:\\Users\\mashu\\error.txt', 'a+')
+                            txt.write('%s\r\n' % (e))
+                            txt.close()
+                            os.popen('notepad ' "C:\\Users\\mashu\\error.txt" '')
+                            # os.system('python C:\\Users\\mashu\\fix.py')
+                            # exit()
+                    time.sleep(1)
     except KeyboardInterrupt:
         print('Stopping ...')
     finally:
