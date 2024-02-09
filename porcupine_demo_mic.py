@@ -111,7 +111,12 @@ def speak(cmd):
     print("Miami :", cmd)
     engine.runAndWait()
     vnote = ''
-
+def hibernate_windows():
+    try:
+        # Execute the command to put Windows into hibernation
+        subprocess.run(["shutdown", "/h"], check=True)
+    except subprocess.CalledProcessError as e:
+        print("Error:", e)
 
 def get_default_audio_interface():
     devices = AudioUtilities.GetSpeakers()
@@ -992,7 +997,7 @@ def main():
 
 
                         elif ('system' in voice_note or 'computer' in voice_note or 'pc' in voice_note) and (
-                                'shut' in voice_note or 'reboot' in voice_note or 'restart' in voice_note or 'turn off' in voice_note):
+                                'shut' in voice_note or 'reboot' in voice_note or 'restart' in voice_note or 'turn off' in voice_note or 'sleep' in voice_note or 'hiber'):
                             if 'shut' in voice_note:
                                 speak("Are you sure you want to shut down the system")
                                 confirmation = listen2().lower()
@@ -1010,6 +1015,14 @@ def main():
                                     os.system('shutdown -r -t 0')
                                 else:
                                     speak('As you wish')
+                            elif 'sleep' in voice_note or 'hiber':
+                                speak("Are you sure you want to put system in sleep mode?")
+                                confirmation = listen2().lower()
+                                if ('yes' or 'please') in confirmation:
+                                    speak('Putting system in sleep mode')
+                                    hibernate_windows()
+                                else:
+                                    ('As  you wish')                                
                             else:
                                 speak('Exception occure at restart')                             
                         
