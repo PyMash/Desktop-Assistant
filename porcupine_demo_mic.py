@@ -1,6 +1,6 @@
 failsafe_check = 0
 #ReDesign AI2
-# Copyright 2018-2023 Picovoice Inc.
+# Copyright 2018-2023 MashuInc.
 #
 # You may not use this file except in compliance with the license. A copy of the license is located in the "LICENSE"
 # file accompanying this source.
@@ -254,50 +254,50 @@ def open_first_google_result(query):
         print("Error:", e)
         return False
 
-def listen2():
-    # global audcheck
-    # global listen_time
-    # if listen_time > 0:
-    playsound("C:\\users\\mashu\\start.mp3")
-    original_volume = get_current_volume(audio_interface)
-    set_volume_system(audio_interface, 0.3)
-    subscription_key = "1aa6bdc29d29411fbc2f606abb89a742"
-    region = "centralindia"
+# def listen():
+#     # global audcheck
+#     # global listen_time
+#     # if listen_time > 0:
+#     playsound("C:\\users\\mashu\\start.mp3")
+#     original_volume = get_current_volume(audio_interface)
+#     set_volume_system(audio_interface, 0.3)
+#     subscription_key = "1aa6bdc29d29411fbc2f606abb89a742"
+#     region = "centralindia"
 
-    speech_config = speechsdk.SpeechConfig(subscription=subscription_key, region=region)
-    audio_config = speechsdk.AudioConfig(use_default_microphone=True)
+#     speech_config = speechsdk.SpeechConfig(subscription=subscription_key, region=region)
+#     audio_config = speechsdk.AudioConfig(use_default_microphone=True)
 
-    print('Listening...')
-    try:
-        recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
-        result = recognizer.recognize_once()
+#     print('Listening...')
+#     try:
+#         recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
+#         result = recognizer.recognize_once()
 
-        if result.reason == speechsdk.ResultReason.RecognizedSpeech:
-            set_volume_system(audio_interface, original_volume)
-            print('Recognized: {}'.format(result.text))
-            # audcheck = 0
-            # listen_time += 1
-            return result.text
-        elif result.reason == speechsdk.ResultReason.NoMatch:
-            set_volume_system(audio_interface, original_volume)
-            print('No speech could be recognized')
-            # listen_time += 1
-            # audcheck += 1
-            # if audcheck == 1:                
-            #     playsound("C:\\users\\mashu\\stop.mp3")
-            #     print(':: Waiting for wakeword detection ::')
-            #     listen_time = 0
-            return ''
-        elif result.reason == speechsdk.ResultReason.Canceled:
-            cancellation_details = result.cancellation_details
-            print('Speech Recognition canceled: {}'.format(cancellation_details.reason))
-            if cancellation_details.reason == speechsdk.CancellationReason.Error:
-                print('Error details: {}'.format(cancellation_details.error_details))
-            return ''
-        set_volume_system(audio_interface, original_volume)
-    except Exception as e:
-        print("Speech recognition error: {}".format(e))
-        return ''
+#         if result.reason == speechsdk.ResultReason.RecognizedSpeech:
+#             set_volume_system(audio_interface, original_volume)
+#             print('Recognized: {}'.format(result.text))
+#             # audcheck = 0
+#             # listen_time += 1
+#             return result.text
+#         elif result.reason == speechsdk.ResultReason.NoMatch:
+#             set_volume_system(audio_interface, original_volume)
+#             print('No speech could be recognized')
+#             # listen_time += 1
+#             # audcheck += 1
+#             # if audcheck == 1:                
+#             #     playsound("C:\\users\\mashu\\stop.mp3")
+#             #     print(':: Waiting for wakeword detection ::')
+#             #     listen_time = 0
+#             return ''
+#         elif result.reason == speechsdk.ResultReason.Canceled:
+#             cancellation_details = result.cancellation_details
+#             print('Speech Recognition canceled: {}'.format(cancellation_details.reason))
+#             if cancellation_details.reason == speechsdk.CancellationReason.Error:
+#                 print('Error details: {}'.format(cancellation_details.error_details))
+#             return ''
+#         set_volume_system(audio_interface, original_volume)
+#     except Exception as e:
+#         print("Speech recognition error: {}".format(e))
+#         return ''
 
 def read_installed_apps(filename):
     installed_apps = {}
@@ -632,6 +632,11 @@ def shutdown_sys(voice_note):
                 "Sorry  because of security protocol i can't perform this action without password")
         else:
             speak('sorry  password doesnot match')
+
+def run_steam_game(app_id):
+    steam_command = f'steam://rungameid/{app_id}'
+    subprocess.run(['start', steam_command], shell=True)
+
         
         
 def main():
@@ -798,7 +803,7 @@ def main():
                 global voice_note
                 if failsafe_check > 0 :
                     speak('Yes, did the glitch of my program is solved:')
-                    voice_note = listen2().lower()
+                    voice_note = listen().lower()
                     if 'yes' in voice_note or 'solve' in voice_note:
                         speak('Thank you for fixing my problem')
                         open("C:\\Users\\mashu\\error.txt", "w").close()
@@ -840,7 +845,7 @@ def main():
                         #     continue
                         if 'hello' in voice_note or 'fine ' in voice_note or ' hi ' in voice_note:
                             speak("hello how are you?")
-                            voice_note = listen2().lower()
+                            voice_note = listen().lower()
                             if 'not fine' in voice_note or 'not ok' in voice_note:
                                 speak('i am sorry to hear that. I hope you feel better ')
     
@@ -907,9 +912,9 @@ def main():
                             speak('okay, what will be the commited message?')
                             checking = 0
                             while checking < 3:                                
-                                commit_msg = listen2()
+                                commit_msg = listen()
                                 speak('Is the message correct?'+ commit_msg)
-                                confirm = listen2().lower()
+                                confirm = listen().lower()
                                 if 'yes' in confirm :
                                     speak('Okay, Pushing updated code to the Git hub, Please wait')
                                     commit_message = commit_msg
@@ -1000,7 +1005,7 @@ def main():
                                 'shut' in voice_note or 'reboot' in voice_note or 'restart' in voice_note or 'turn off' in voice_note or 'sleep' in voice_note or 'hiber'):
                             if 'shut' in voice_note:
                                 speak("Are you sure you want to shut down the system")
-                                confirmation = listen2().lower()
+                                confirmation = listen().lower()
                                 if ('yes' or 'please') in confirmation:
                                     speak('shutting down system')
                                     speak(' Bye  and take care ')
@@ -1009,7 +1014,7 @@ def main():
                                     speak('As you wish')
                             elif 'rest' in voice_note or 'boot' in voice_note:
                                 speak("Are you sure you want to restart the system")
-                                confirmation = listen2().lower()
+                                confirmation = listen().lower()
                                 if ('yes' or 'please') in confirmation:
                                     speak('restarting the system')
                                     os.system('shutdown -r -t 0')
@@ -1017,7 +1022,7 @@ def main():
                                     speak('As you wish')
                             elif 'sleep' in voice_note or 'hiber':
                                 speak("Are you sure you want to put system in sleep mode?")
-                                confirmation = listen2().lower()
+                                confirmation = listen().lower()
                                 if ('yes' or 'please') in confirmation:
                                     speak('Putting system in sleep mode')
                                     hibernate_windows()
@@ -1084,16 +1089,21 @@ def main():
                         elif re.search(r'news', voice_note, re.IGNORECASE):
                             speak('Fetching todays news please wait')
                             news()                            
-                        elif re.search(r'\b(extend display|dual display|coding time|work time)\b', voice_note):
+                        elif re.search(r'\b(extend display|dual display|coding time|work time|extended display)\b', voice_note):
                             os.popen('DisplaySwitch.exe /extend')                            
                             if('coding' in voice_note):
-                                speak('Extending display and opening vs code.')
+                                speak('Extending display and opening vs code.')\
+                                
                             else:
                                 speak("Extending display.") 
-                        elif re.search(r'\b(switch to display 1|gaming display|gaming time|movie time|dinner time)\b', voice_note):
+                        elif re.search(r'\b(switch to display 1|gaming display|gaming time|movie time|dinner time|gaming mode)\b', voice_note):
                             os.popen('DisplaySwitch.exe /internal')
                             if('gaming' in voice_note):
-                                speak('Enjoy Gaming')
+                                speak('Should i open apex legend')
+                                check = listen().lower()
+                                if 'yes' in check:
+                                    speak('Opening Apex Legend')                                  
+                                    run_steam_game(1172470)                                    
                             elif('dinner' in voice_note):
                                 speak("enjoy dinner time and what you want to prefer Youtube or Netflix?")
                                 preference = listen()
@@ -1119,7 +1129,7 @@ def main():
                             if 'yes' in voice_note or 'open' in voice_note:
                                 os.popen('notepad ' "C:\\Users\\mashu\\masu.txt" '')
                                 speak('should i read it for you ')
-                                voice_note = listen2().lower()
+                                voice_note = listen().lower()
                                 if 'yes' in voice_note or 'read' in voice_note:
                                     pyautogui.hotkey('ctrl', 'a')
                                     reader()
@@ -1242,7 +1252,7 @@ def main():
                             word_filter(voice_note)
                             while True:
                                 speak('done , and do you want to write more ')
-                                voice_note = listen2().lower()
+                                voice_note = listen().lower()
                                 if 'yes' in voice_note:
                                     speak('ok  tell me what to write next')
                                     voice_note = listen().lower()
@@ -1269,6 +1279,7 @@ def main():
                         elif re.search(r'\b(?:log|file)\b', voice_note):
                             speak('Opening log file')
                             os.popen('notepad ' "C:\\Users\\mashu\\log.txt" '')
+                            
                                         
                         
                         elif 'open' in voice_note and ' 'in voice_note:
@@ -1284,6 +1295,10 @@ def main():
                                     elif 'cmd' in voice_note or 'command' in voice_note or 'prompt' in voice_note:
                                         os.system("start cmd")
                                         speak('Opening Command Promt')
+                                    elif 'apex' in voice_note:
+                                        os.system('DisplaySwitch.exe /internal')
+                                        speak("Opening Apex Legend")                                    
+                                        run_steam_game(1172470)
                                     else:
                                         voice_note = voice_note.replace('open', '').replace('application', '').replace('app', '').strip()                                        
                                         query = voice_note
@@ -1326,7 +1341,7 @@ def main():
                         elif re.search(r'\b(bye|goodbye|quit|kill yourself)\b', voice_note, re.IGNORECASE):
                             # Your code for handling goodbye actions
                             speak('Do you want me to quit ?')
-                            check = listen2().lower()
+                            check = listen().lower()
                             if( 'yes' in check ):
                                 speak('Okay tell me the exit code to proceed')
                                 exitcode =listen().lower()
@@ -1347,7 +1362,7 @@ def main():
                         
                         elif 'goodnight' in voice_note or 'night' in voice_note:
                             speak(random.choice(["Goodnight!", "Sweet dreams!", "Sleep well!"])+" and do you want me to shut down the system?")                            
-                            altq = listen2().lower()
+                            altq = listen().lower()
                             if 'yes' in altq or 'shut down' in altq:
                                 speak('shutting down system')
                                 speak('Bye and take care')
