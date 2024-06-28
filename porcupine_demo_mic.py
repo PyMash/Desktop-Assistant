@@ -261,7 +261,7 @@ def open_first_google_result(query):
 #     playsound("C:\\users\\mashu\\start.mp3")
 #     original_volume = get_current_volume(audio_interface)
 #     set_volume_system(audio_interface, 0.3)
-#     subscription_key = "1aa6bdc29d29411fbc2f606abb89a742"
+#     subscription_key = "your google cloud key"
 #     region = "centralindia"
 
 #     speech_config = speechsdk.SpeechConfig(subscription=subscription_key, region=region)
@@ -575,7 +575,7 @@ def miami_response():
     return random.choice(responses)
 def weather(cmd):
     try:
-        api_key = "e4f632b30200a8119247a8df609f16fa"
+        api_key = "api key paste here"
         base_url = "http://api.openweathermap.org/data/2.5/weather?"
         city_name = 'Greater Noida, IN'
         complete_url = base_url + "appid=" + api_key + "&q=" + city_name
@@ -816,7 +816,7 @@ def main():
                         with open(__file__, 'w') as f:
                             f.write('\n'.join([new_line] + lines[1:]))
                         speak('Now please wait a second. let me update my program to continue')
-                        os.system('porcupine_demo_mic --access_key uX5rsH7XMmSI5Aey1irLgr+R4OiwiTZch0L/JIIZLwZDjCZgauAaZg== --keywords miami --audio_device_index 1')
+                        os.system('porcupine_demo_mic --access_key your access key""--keywords miami --audio_device_index 1')
                     else:                        
                         speak('Its okay now tell me  what can i do for you ?')
                 else:
@@ -1185,7 +1185,7 @@ def main():
                                 "Got it! I'll get the latest updates for you.",
                             ]
                             speak(random.choice(responses))
-                            os.system('porcupine_demo_mic --access_key uX5rsH7XMmSI5Aey1irLgr+R4OiwiTZch0L/JIIZLwZDjCZgauAaZg== --keywords miami --audio_device_index 1')
+                            os.system('porcupine_demo_mic --access_key "your access key" --keywords miami --audio_device_index 1')
                             exit()
 
                         elif ('source' in voice_note or 'your' in voice_note) and 'code' in voice_note:
