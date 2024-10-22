@@ -28,7 +28,7 @@ Miami is a powerful desktop assistant designed to respond to voice commands usin
 4. Run Miami with the following command:
 
     ```bash
-    porcupine_demo_mic --access_key uX5rsH7XMmSI5Aey1irLgr+R4OiwiTZch0L/JIIZLwZDjCZgauAaZg== --keywords miami --audio_device_index 1
+    porcupine_demo_mic --access_key "your porcupine accesskey" --keywords miami --audio_device_index 1
     ```
 
 Make sure to replace the `--access_key` parameter with your Porcupine access key.
